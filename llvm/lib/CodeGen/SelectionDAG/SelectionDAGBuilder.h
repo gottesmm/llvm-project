@@ -608,12 +608,19 @@ private:
 
   void emitInlineAsmError(const CallBase &Call, const Twine &Message);
 
+  enum class FuncArgumentDbgValueKind {
+    Value,
+    Addr,
+    Declare,
+  };
+
   /// If V is an function argument then create corresponding DBG_VALUE machine
   /// instruction for it now. At the end of instruction selection, they will be
   /// inserted to the entry BB.
   bool EmitFuncArgumentDbgValue(const Value *V, DILocalVariable *Variable,
                                 DIExpression *Expr, DILocation *DL,
-                                bool IsDbgDeclare, const SDValue &N);
+                                FuncArgumentDbgValueKind kind,
+                                const SDValue &N);
 
   /// Return the next block after MBB, or nullptr if there is none.
   MachineBasicBlock *NextBlock(MachineBasicBlock *MBB);

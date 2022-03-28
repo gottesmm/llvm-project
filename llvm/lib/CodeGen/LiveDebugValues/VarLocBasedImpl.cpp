@@ -2196,24 +2196,28 @@ bool VarLocBasedLDV::ExtendRanges(MachineFunction &MF,
   // Only in the case of entry MBB collect DBG_VALUEs representing
   // function parameters in order to generate debug entry values for them.
   SmallVector<MachineInstr *, 8> AsyncDbgValues;
-  MachineBasicBlock &First_MBB = *(MF.begin());
-  for (auto &MI : First_MBB) {
+  MachineBasicBlock &FirstMBB = *(MF.begin());
+  for (auto &MI : FirstMBB) {
     collectRegDefs(MI, DefinedRegs, TRI);
     if (MI.isDebugValue()) {
       // In Swift async functions entry values are preferred, since they
       // can be evaluated in both live frames and virtual backtraces.
       if (isSwiftAsyncContext(MI)) {
-        MI.getOperand(3).setMetadata(DIExpression::prepend(
-            MI.getDebugExpression(), DIExpression::EntryValue));
+        // If our instruction is not an entry value yet, make it an entry value.
+        if (!MI.getDebugExpression()->isEntryValue()) {
+          MI.getOperand(3).setMetadata(DIExpression::prepend(
+              MI.getDebugExpression(), DIExpression::EntryValue));
+        }
         AsyncDbgValues.push_back(&MI);
-      } else
+      } else {
         recordEntryValue(MI, DefinedRegs, OpenRanges, VarLocIDs);
+      }
     }
   }
 
   if (AsyncDbgValues.size()) {
     // Make sure the async entry values are at the very start.
-    auto InsertPt = First_MBB.getFirstNonDebugInstr();
+    auto InsertPt = FirstMBB.getFirstNonDebugInstr();
     for (auto *MI : llvm::reverse(AsyncDbgValues))
       MI->moveBefore(&*InsertPt);
   }
