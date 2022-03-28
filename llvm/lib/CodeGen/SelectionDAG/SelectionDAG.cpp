@@ -9254,6 +9254,18 @@ SDDbgValue *SelectionDAG::getVRegDbgValue(DIVariable *Var, DIExpression *Expr,
                  /*IsVariadic=*/false);
 }
 
+SDDbgValue *
+SelectionDAG::getEntryValueRegDbgValue(DIVariable *Var, DIExpression *Expr,
+                                       unsigned VReg, bool IsIndirect,
+                                       const DebugLoc &DL, unsigned O) {
+  assert(cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
+         "Expected inlined-at fields to agree");
+  return new (DbgInfo->getAlloc())
+      SDDbgValue(DbgInfo->getAlloc(), Var, Expr,
+                 SDDbgOperand::fromEntryValueReg(VReg), {}, IsIndirect, DL, O,
+                 /*IsVariadic=*/false);
+}
+
 SDDbgValue *SelectionDAG::getDbgValueList(DIVariable *Var, DIExpression *Expr,
                                           ArrayRef<SDDbgOperand> Locs,
                                           ArrayRef<SDNode *> Dependencies,

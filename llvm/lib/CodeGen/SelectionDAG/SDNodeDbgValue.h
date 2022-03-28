@@ -30,10 +30,13 @@ class raw_ostream;
 class SDDbgOperand {
 public:
   enum Kind {
-    SDNODE = 0,  ///< Value is the result of an expression.
-    CONST = 1,   ///< Value is a constant.
-    FRAMEIX = 2, ///< Value is contents of a stack location.
-    VREG = 3     ///< Value is a virtual register.
+    SDNODE = 0,        ///< Value is the result of an expression.
+    CONST = 1,         ///< Value is a constant.
+    FRAMEIX = 2,       ///< Value is contents of a stack location.
+    VREG = 3,          ///< Value is a virtual register.
+    ENTRYVALUEREG = 4, ///< Value is a physical register that should be
+                       ///< transformed into an entry value during instr
+                       ///< emission.
   };
   Kind getKind() const { return kind; }
 
@@ -47,6 +50,12 @@ public:
   unsigned getResNo() const {
     assert(kind == SDNODE);
     return u.s.ResNo;
+  }
+
+  /// Returns the ResNo for a register ref
+  unsigned getEntryValueReg() const {
+    assert(kind == ENTRYVALUEREG);
+    return u.EntryValueReg;
   }
 
   /// Returns the Value* for a constant
@@ -76,6 +85,9 @@ public:
   static SDDbgOperand fromVReg(unsigned VReg) {
     return SDDbgOperand(VReg, VREG);
   }
+  static SDDbgOperand fromEntryValueReg(unsigned EntryValueReg) {
+    return SDDbgOperand(EntryValueReg, ENTRYVALUEREG);
+  }
   static SDDbgOperand fromConst(const Value *Const) {
     return SDDbgOperand(Const);
   }
@@ -93,6 +105,8 @@ public:
       return getVReg() == Other.getVReg();
     case FRAMEIX:
       return getFrameIx() == Other.getFrameIx();
+    case ENTRYVALUEREG:
+      return getEntryValueReg() == Other.getEntryValueReg();
     }
     return false;
   }
@@ -107,6 +121,7 @@ private:
     const Value *Const; ///< Valid for constants.
     unsigned FrameIx;   ///< Valid for stack objects.
     unsigned VReg;      ///< Valid for registers.
+    unsigned EntryValueReg; ///< Valid for physiucal regs that need entry value.
   } u;
 
   /// Constructor for non-constants.
@@ -117,13 +132,15 @@ private:
   /// Constructor for constants.
   SDDbgOperand(const Value *C) : kind(CONST) { u.Const = C; }
   /// Constructor for virtual registers and frame indices.
-  SDDbgOperand(unsigned VRegOrFrameIdx, Kind Kind) : kind(Kind) {
-    assert((Kind == VREG || Kind == FRAMEIX) &&
+  SDDbgOperand(unsigned RegOrFrameIdx, Kind Kind) : kind(Kind) {
+    assert((Kind == VREG || Kind == FRAMEIX || Kind == ENTRYVALUEREG) &&
            "Invalid SDDbgValue constructor");
     if (kind == VREG)
-      u.VReg = VRegOrFrameIdx;
+      u.VReg = RegOrFrameIdx;
+    else if (kind == FRAMEIX)
+      u.FrameIx = RegOrFrameIdx;
     else
-      u.FrameIx = VRegOrFrameIdx;
+      u.EntryValueReg = RegOrFrameIdx;
   }
 };
 

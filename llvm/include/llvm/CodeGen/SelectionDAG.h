@@ -1574,6 +1574,12 @@ public:
                               unsigned VReg, bool IsIndirect,
                               const DebugLoc &DL, unsigned O);
 
+  /// Creates a SDDbgValue for a physical register that should be changed into
+  /// an entry value.
+  SDDbgValue *getEntryValueRegDbgValue(DIVariable *Var, DIExpression *Expr,
+                                       unsigned VReg, bool IsIndirect,
+                                       const DebugLoc &DL, unsigned O);
+
   /// Creates a SDDbgValue node from a list of locations.
   SDDbgValue *getDbgValueList(DIVariable *Var, DIExpression *Expr,
                               ArrayRef<SDDbgOperand> Locs,

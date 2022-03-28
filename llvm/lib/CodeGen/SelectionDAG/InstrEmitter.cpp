@@ -721,9 +721,15 @@ void InstrEmitter::AddDbgValueLocationOps(
     case SDDbgOperand::FRAMEIX:
       MIB.addFrameIndex(Op.getFrameIx());
       break;
-    case SDDbgOperand::VREG:
+    case SDDbgOperand::VREG: {
       MIB.addReg(Op.getVReg());
       break;
+    }
+    case SDDbgOperand::ENTRYVALUEREG: {
+      // We will add our entry value to the expression in our caller.
+      MIB.addReg(Op.getEntryValueReg());
+      break;
+    }
     case SDDbgOperand::SDNODE: {
       SDValue V = SDValue(Op.getSDNode(), Op.getResNo());
       // It's possible we replaced this SDNode with other(s) and therefore
@@ -879,14 +885,21 @@ InstrEmitter::EmitDbgValueFromSingleOp(SDDbgValue *SD,
   assert(SD->getLocationOps().size() == 1 &&
          "Non variadic dbg_value should have only one location op");
 
-  // See about constant-folding the expression.
   // Copy the location operand in case we replace it.
   SmallVector<SDDbgOperand, 1> LocationOps(1, SD->getLocationOps()[0]);
-  if (Expr && LocationOps[0].getKind() == SDDbgOperand::CONST) {
-    const Value *V = LocationOps[0].getConst();
-    if (auto *C = dyn_cast<ConstantInt>(V)) {
-      std::tie(Expr, C) = Expr->constantFold(C);
-      LocationOps[0] = SDDbgOperand::fromConst(C);
+  if (Expr) {
+    // First see if we can constant fold our expression.
+    if (LocationOps[0].getKind() == SDDbgOperand::CONST) {
+      const Value *V = LocationOps[0].getConst();
+      if (auto *C = dyn_cast<ConstantInt>(V)) {
+        std::tie(Expr, C) = Expr->constantFold(C);
+        LocationOps[0] = SDDbgOperand::fromConst(C);
+      }
+    } else if (LocationOps.size() == 1 &&
+               LocationOps[0].getKind() == SDDbgOperand::ENTRYVALUEREG) {
+      // If we have a single SDDbgOperand that is an entry value arg, make expr
+      // an entry value.
+      Expr = DIExpression::prepend(Expr, DIExpression::EntryValue);
     }
   }
 

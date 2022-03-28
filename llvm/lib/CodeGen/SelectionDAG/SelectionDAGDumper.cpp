@@ -863,6 +863,9 @@ LLVM_DUMP_METHOD void SDDbgValue::print(raw_ostream &OS) const {
     case SDDbgOperand::VREG:
       OS << "VREG=" << Op.getVReg();
       break;
+    case SDDbgOperand::ENTRYVALUEREG:
+      OS << "ENTRYVALUEREG=" << Op.getEntryValueReg();
+      break;
     }
     Comma = true;
   }
